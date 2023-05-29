@@ -27,11 +27,12 @@ mod tests {
     use std::collections::HashMap;
 
     use assert_json_diff::assert_json_eq;
+    use kms::{kms::KMSEnum, vault::VaultEnum};
     use serde_json::json;
 
     use crate::{
-        envelope::{Envelope, KMSProvider, WrapType},
-        vault::{VaultProvider, VaultSecret},
+        envelope::{Envelope, WrapType},
+        vault::VaultSecret,
     };
 
     use super::{Secret, SecretType};
@@ -41,7 +42,7 @@ mod tests {
         let secret = Secret {
             version: "0.1.0".into(),
             r#type: SecretType::KMS(Envelope {
-                provider: KMSProvider::Ali,
+                provider: KMSEnum::Ali,
                 key_id: "xxx".into(),
                 encrypted_key: "yyy".into(),
                 encrypted_data: "zzz".into(),
@@ -71,14 +72,14 @@ mod tests {
         let secret = Secret {
             version: "0.1.0".into(),
             r#type: SecretType::Vault(VaultSecret {
-                provider: VaultProvider::Ali,
+                provider: VaultEnum::Ali,
                 annotations: HashMap::new(),
             }),
         };
 
         let expected = json!({
             "version": "0.1.0",
-            "type": "vault",
+            "type": "Vault",
             "provider": "Ali",
             "annotations": {}
         });

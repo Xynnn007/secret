@@ -5,10 +5,15 @@
 
 use std::collections::HashMap;
 
+use anyhow::*;
+use base64::Engine;
 use crypto::WrapType as OutWrapType;
+use kms::kms::KMSEnum;
 use serde::{Deserialize, Serialize};
+use strum::AsRefStr;
+use zeroize::Zeroizing;
 
-#[derive(Serialize, Deserialize)]
+#[derive(AsRefStr, Serialize, Deserialize)]
 pub enum WrapType {
     Aes256Gcm,
     Aes256Ctr,
@@ -23,11 +28,6 @@ impl From<WrapType> for OutWrapType {
     }
 }
 
-#[derive(Serialize, Deserialize)]
-pub enum KMSProvider {
-    Ali,
-}
-
 /// An Envelope is a secret encrypted by digital envelope mechanism.
 /// It can be described as
 ///
@@ -36,7 +36,7 @@ pub enum KMSProvider {
 /// where Enc(A,B) means use key A to encrypt B
 #[derive(Serialize, Deserialize)]
 pub struct Envelope {
-    pub provider: KMSProvider,
+    pub provider: KMSEnum,
 
     /// key id to locate the key inside KMS
     pub key_id: String,
@@ -55,4 +55,20 @@ pub struct Envelope {
 
     /// KMS specific fields to locate the Key inside KMS
     pub annotations: HashMap<String, String>,
+}
+
+impl Envelope {
+    pub async fn open(&self) -> Result<Vec<u8>> {
+        let mut client = self.provider.to_client().await?;
+        let base64_decoder = base64::engine::general_purpose::STANDARD;
+        let enc_dek = base64_decoder.decode(&self.encrypted_key)?;
+        let datakey = Zeroizing::new(
+            client
+                .decrypt(&enc_dek, &self.key_id, &self.annotations)
+                .await?,
+        );
+        let iv = base64_decoder.decode(&self.iv)?;
+        let ciphertext = base64_decoder.decode(&self.encrypted_data)?;
+        crypto::decrypt(datakey, ciphertext, iv, self.wrap_type.as_ref())
+    }
 }

@@ -5,15 +5,19 @@
 
 use std::collections::HashMap;
 
+use anyhow::*;
+use kms::vault::VaultEnum;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
-pub enum VaultProvider {
-    Ali,
+pub struct VaultSecret {
+    pub provider: VaultEnum,
+    pub annotations: HashMap<String, String>,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct VaultSecret {
-    pub provider: VaultProvider,
-    pub annotations: HashMap<String, String>,
+impl VaultSecret {
+    pub async fn open(&self) -> Result<Vec<u8>> {
+        let mut client = self.provider.to_client().await?;
+        client.get_secret(&self.annotations).await
+    }
 }

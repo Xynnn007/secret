@@ -1,5 +1,5 @@
-Cargo.lock
-
+# Rust build cache
 target
 
+# temp files
 *.json

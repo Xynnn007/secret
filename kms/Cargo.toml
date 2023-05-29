@@ -1,0 +1,18 @@
+[package]
+name = "kms"
+version = "0.1.0"
+authors = ["The Confidential Container Authors"]
+publish = false
+edition = "2021"
+
+[dependencies]
+anyhow.workspace = true
+async-trait.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+strum = { workspace = true, features = ["derive"] }
+tokio.workspace = true
+
+[dev-dependencies]
+rstest.workspace = true
+tokio = { workspace = true, features = ["rt", "macros" ] }

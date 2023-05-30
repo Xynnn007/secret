@@ -1,0 +1,23 @@
+[package]
+name = "hub-core"
+version = "0.1.0"
+authors = ["The Confidential Container Authors"]
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow.workspace = true
+kms.path = "../kms"
+log.workspace = true
+secret.path = "../secret"
+serde_json.workspace = true
+storage.path = "../storage"
+strum = { workspace = true, features = ["derive"] }
+tokio = { workspace = true, features = [ "rt-multi-thread", "macros" ] }
+
+[dev-dependencies]
+assert-json-diff.workspace = true
+
+[build-dependencies]
+tonic-build.workspace = true

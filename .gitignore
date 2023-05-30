@@ -3,3 +3,6 @@ target
 
 # temp files
 *.json
+
+# Cargo tree file
+tree

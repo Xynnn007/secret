@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
+use anyhow::*;
 use serde::{Deserialize, Serialize};
 
 use crate::{envelope::Envelope, vault::VaultSecret};
@@ -20,6 +21,15 @@ pub struct Secret {
 
     #[serde(flatten)]
     r#type: SecretType,
+}
+
+impl Secret {
+    pub async fn open(self) -> Result<Vec<u8>> {
+        match self.r#type {
+            SecretType::KMS(inner) => inner.open().await,
+            SecretType::Vault(inner) => inner.open().await,
+        }
+    }
 }
 
 #[cfg(test)]

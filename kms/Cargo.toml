@@ -8,10 +8,11 @@ edition = "2021"
 [dependencies]
 anyhow.workspace = true
 async-trait.workspace = true
+base64.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 strum = { workspace = true, features = ["derive"] }
-tokio.workspace = true
+tokio = { workspace = true, features = ["process"] }
 
 [dev-dependencies]
 rstest.workspace = true

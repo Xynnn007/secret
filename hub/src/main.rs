@@ -7,7 +7,7 @@ use std::net::SocketAddr;
 
 use clap::Parser;
 
-mod service;
+pub mod service;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -20,5 +20,4 @@ struct Args {
 #[tokio::main]
 async fn main() {
     let args = Args::parse();
-    
 }

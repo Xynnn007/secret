@@ -16,7 +16,7 @@ pub struct DataHub {
 impl DataHub {
     pub fn new() -> Self {
         Self {
-            storage_mgr: StorageManager::default()
+            storage_mgr: StorageManager::default(),
         }
     }
 

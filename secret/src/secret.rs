@@ -17,10 +17,10 @@ pub enum SecretType {
 
 #[derive(Serialize, Deserialize)]
 pub struct Secret {
-    version: String,
+    pub version: String,
 
     #[serde(flatten)]
-    r#type: SecretType,
+    pub r#type: SecretType,
 }
 
 impl Secret {

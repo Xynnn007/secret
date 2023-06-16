@@ -5,6 +5,8 @@
 
 //! Drivers of KMS
 
+pub mod ali;
+
 use std::collections::HashMap;
 
 use anyhow::{bail, Result};
@@ -40,7 +42,7 @@ pub trait KMS: Send {
 }
 
 /// An Enum of all the supported KMS
-#[derive(EnumString, Serialize, Deserialize)]
+#[derive(Clone, EnumString, Serialize, Deserialize)]
 pub enum KMSEnum {
     Ali,
 }
@@ -48,7 +50,7 @@ pub enum KMSEnum {
 impl KMSEnum {
     pub async fn to_client(&self) -> Result<Box<dyn KMS>> {
         match self {
-            KMSEnum::Ali => todo!(),
+            KMSEnum::Ali => Ok(Box::new(ali::Client::from_env()?)),
         }
     }
 }

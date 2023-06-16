@@ -5,6 +5,7 @@ members = [
     "hub",
     "hub-core",
     "storage",
+    "tools",
 ]
 
 [workspace.package]

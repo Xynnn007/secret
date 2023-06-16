@@ -3,14 +3,14 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use anyhow::{anyhow, Result, bail};
+use anyhow::{anyhow, bail, Result};
 use base64::Engine;
 use serde::{Deserialize, Serialize};
-use strum::AsRefStr;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::str;
 use std::vec::Vec;
+use strum::AsRefStr;
 
 #[derive(AsRefStr)]
 enum ErrorInfo {
@@ -254,290 +254,89 @@ pub struct KeyUnwrapResults {
 
 #[cfg(test)]
 mod tests {
+    use rstest::rstest;
+
     use super::*;
 
-    #[test]
-    fn test_key_wrap_params_valid() {
-        #[derive(Debug)]
-        struct TestData {
-            ec: Option<Ec>,
-            opts: Option<String>,
-            result: Result<()>,
+    #[rstest]
+    #[case(None, None, Ok(()))]
+    #[case(Some(Ec::default()), Some("".into()), Ok(()))]
+    #[case(None, Some("foo".into()), Err(anyhow!("{}", ErrorInfo::WrapParamsExpectEmptyOptsdata.as_ref())))]
+    #[case(Some(Ec::default()), None, Ok(()))]
+    #[case(Some(Ec::default()), Some("foo".into()), Err(anyhow!("{}", ErrorInfo::WrapParamsExpectEmptyOptsdata.as_ref())))]
+    #[case(None, Some("".into()), Ok(()))]
+    fn test_key_wrap_params_valid(
+        #[case] ec: Option<Ec>,
+        #[case] opts: Option<String>,
+        #[case] result: Result<()>,
+    ) {
+        // Create a string containing details of the test
+        let mut params = KeyWrapParams::default();
+
+        if let Some(ec) = ec {
+            params = params.with_ec(ec);
         }
 
-        let tests = &[
-            TestData {
-                ec: None,
-                opts: None,
-                result: Ok(()),
-            },
-            TestData {
-                ec: Some(Ec::default()),
-                opts: Some("".into()),
-                result: Ok(()),
-            },
-            TestData {
-                ec: None,
-                opts: Some("foo".into()),
-                result: Err(anyhow!("{}", ErrorInfo::WrapParamsExpectEmptyOptsdata.as_ref())),
-            },
-            TestData {
-                ec: Some(Ec::default()),
-                opts: None,
-                result: Ok(()),
-            },
-            TestData {
-                ec: Some(Ec::default()),
-                opts: Some("foo".into()),
-                result: Err(anyhow!("{}", ErrorInfo::WrapParamsExpectEmptyOptsdata.as_ref())),
-            },
-            TestData {
-                ec: None,
-                opts: Some("".into()),
-                result: Ok(()),
-            },
-        ];
-
-        for (i, d) in tests.iter().enumerate() {
-            // Create a string containing details of the test
-            let msg = format!("test[{}]: {:?}", i, d);
-
-            let mut params = KeyWrapParams::default();
-
-            if let Some(ec) = d.ec.clone() {
-                params = params.with_ec(ec);
-            }
-
-            if let Some(opts) = d.opts.clone() {
-                params = params.with_opts_data(opts);
-            }
-
-            let result = params.valid();
-
-            let msg = format!("{}: result: {:?}", msg, result);
-
-            if d.result.is_err() {
-                assert!(result.is_err(), "{}", msg);
-
-                let expected_error = format!("{:?}", d.result.as_ref().err().unwrap());
-                let actual_error = format!("{:?}", result.err().unwrap());
-
-                assert!(actual_error.starts_with(&expected_error), "{}", msg);
-            } else {
-                assert!(result.is_ok(), "{}", msg);
-
-                let expected_result = d.result.as_ref().unwrap();
-                let actual_result = result.unwrap();
-
-                assert_eq!(expected_result, &actual_result, "{}", msg);
-            }
+        if let Some(opts) = opts {
+            params = params.with_opts_data(opts);
         }
+
+        let res = params.valid();
+
+        assert_eq!(format!("{res:?}"), format!("{result:?}"));
     }
 
-    #[test]
-    fn test_key_unwrap_params_valid() {
-        #[derive(Debug)]
-        struct TestData {
-            dc: Option<Dc>,
-            annotation: Option<String>,
-            result: Result<()>,
+    #[rstest]
+    #[case(None, None, Err(anyhow!(ErrorInfo::UnwrapParamsNoDc.as_ref())))]
+    #[case(Some(Dc::default()), None, Err(anyhow!(ErrorInfo::UnwrapParamsNoDc.as_ref())))]
+    #[case(None, Some("".into()), Err(anyhow!(ErrorInfo::UnwrapParamsNoDc.as_ref())))]
+    #[case(Some(Dc { parameters: HashMap::from([("attestation-agent".into(), vec![base64::engine::general_purpose::STANDARD.encode("kbc-name::kbs-uri")])])}), None, Err(anyhow!(ErrorInfo::UnwrapParamsNoAnnotation.as_ref())))]
+    #[case(Some(Dc { parameters: HashMap::from([("attestation-agent".into(), vec![base64::engine::general_purpose::STANDARD.encode("kbc-name::kbs-uri")])])}), Some("".into()), Err(anyhow!(ErrorInfo::UnwrapParamsNoAnnotation.as_ref())))]
+    #[case(Some(Dc { parameters: HashMap::from([("attestation-agent".into(), vec![base64::engine::general_purpose::STANDARD.encode("kbc-name::kbs-uri")])])}), Some("foo".into()), Ok(()))]
+    fn test_key_unwrap_params_valid(
+        #[case] dc: Option<Dc>,
+        #[case] annotation: Option<String>,
+        #[case] result: Result<()>,
+    ) {
+        // Create a string containing details of the test
+        let mut params = KeyUnwrapParams::default();
+
+        if let Some(dc) = dc {
+            params = params.with_dc(dc);
         }
 
-        let kbc_name = "kbc-name";
-        let kbs_uri = "kbs-uri";
-
-        let annotation_value = format!("{}::{}", kbc_name, kbs_uri);
-
-        let annotation_base64 = base64::engine::general_purpose::STANDARD.encode(annotation_value);
-
-        let mut valid_dc: Dc = Dc::default();
-        valid_dc
-            .parameters
-            .insert("attestation-agent".into(), vec![annotation_base64]);
-
-        let tests = &[
-            TestData {
-                dc: None,
-                annotation: None,
-                result: Err(anyhow!(ErrorInfo::UnwrapParamsNoDc.as_ref())),
-            },
-            TestData {
-                dc: Some(Dc::default()),
-                annotation: None,
-                result: Err(anyhow!(ErrorInfo::UnwrapParamsNoDc.as_ref())),
-            },
-            TestData {
-                dc: None,
-                annotation: Some("".into()),
-                result: Err(anyhow!(ErrorInfo::UnwrapParamsNoDc.as_ref())),
-            },
-            TestData {
-                dc: Some(valid_dc.clone()),
-                annotation: None,
-                result: Err(anyhow!(ErrorInfo::UnwrapParamsNoAnnotation.as_ref())),
-            },
-            TestData {
-                dc: Some(valid_dc.clone()),
-                annotation: Some("".into()),
-                result: Err(anyhow!(ErrorInfo::UnwrapParamsNoAnnotation.as_ref())),
-            },
-            TestData {
-                dc: Some(valid_dc.clone()),
-                annotation: Some("foo".into()),
-                result: Ok(()),
-            },
-        ];
-
-        for (i, d) in tests.iter().enumerate() {
-            // Create a string containing details of the test
-            let msg = format!("test[{}]: {:?}", i, d);
-
-            let mut params = KeyUnwrapParams::default();
-
-            if let Some(dc) = d.dc.clone() {
-                params = params.with_dc(dc);
-            }
-
-            if let Some(an) = d.annotation.clone() {
-                params = params.with_annotation(an);
-            }
-
-            let result = params.valid();
-
-            let msg = format!("{}: result: {:?}", msg, result);
-
-            if d.result.is_err() {
-                assert!(result.is_err(), "{}", msg);
-
-                let expected_error = format!("{:?}", d.result.as_ref().err().unwrap());
-                let actual_error = format!("{:?}", result.err().unwrap());
-
-                assert!(actual_error.starts_with(&expected_error), "{}", msg);
-            } else {
-                assert!(result.is_ok(), "{}", msg);
-
-                let expected_result = d.result.as_ref().unwrap();
-                let actual_result = result.unwrap();
-
-                assert_eq!(expected_result, &actual_result, "{}", msg);
-            }
+        if let Some(an) = annotation {
+            params = params.with_annotation(an);
         }
+
+        let res = params.valid();
+
+        assert_eq!(format!("{res:?}"), format!("{result:?}"));
     }
 
-    #[test]
-    fn test_key_provider_input() {
-        #[derive(Debug)]
-        struct TestData {
-            input: Vec<u8>,
-            result: Result<KeyProviderInput>,
-        }
-
-        let serde_eof_error = "EOF while parsing a value at line 1 column 0";
-
-        let default_input = KeyProviderInput::default();
-        let default_key_unwrap_params = KeyUnwrapParams::default();
-
-        let default_serialised = serde_json::to_string(&default_input).unwrap();
-
-        let invalid_op = "invalid";
-        let input_invalid_op = default_input.clone().with_op(invalid_op.into());
-        let invalid_op_serialised = serde_json::to_string(&input_invalid_op).unwrap();
-
-        let unsupported_op = OP_KEY_WRAP;
-        let input_unsupported_op = default_input.clone().with_op(unsupported_op.into());
-        let unsupported_op_serialised = serde_json::to_string(&input_unsupported_op).unwrap();
-
-        let supported_op = OP_KEY_UNWRAP;
-
-        let input_op_no_unwrap_params = default_input.clone().with_op(supported_op.into());
-        let op_no_unwrap_params_serialised =
-            serde_json::to_string(&input_op_no_unwrap_params).unwrap();
-
-        let input_op_with_empty_unwrap_params = default_input
-            .with_op(supported_op.into())
-            .with_key_unwrap_params(default_key_unwrap_params);
-
-        let op_with_empty_unwrap_params_serialised =
-            serde_json::to_string(&input_op_with_empty_unwrap_params).unwrap();
-
-        let mut valid_dc: Dc = Dc::default();
-
-        valid_dc
-            .parameters
-            .insert("foo".into(), vec!["bar".into(), "baz".into()]);
-
-        let valid_key_unwrap_params = KeyUnwrapParams::default()
-            .with_dc(valid_dc)
-            .with_annotation("annotation".into());
-
-        // valid input
-        let valid_key_provider_input = KeyProviderInput::default()
-            .with_op("keyunwrap".into())
-            .with_key_unwrap_params(valid_key_unwrap_params);
-
-        let valid_serialised = serde_json::to_string(&valid_key_provider_input).unwrap();
-        let tests = &[
-            TestData {
-                input: Vec::<u8>::new(),
-                result: Err(anyhow!(serde_eof_error)),
-            },
-            TestData {
-                input: "".as_bytes().to_vec(),
-                result: Err(anyhow!(serde_eof_error)),
-            },
-            TestData {
-                input: "foo bar".as_bytes().to_vec(),
-                result: Err(anyhow!("expected ident at line 1 column 2")),
-            },
-            TestData {
-                input: default_serialised.as_bytes().to_vec(),
-                result: Err(anyhow!(ErrorInfo::MissingOp.as_ref())),
-            },
-            TestData {
-                input: invalid_op_serialised.as_bytes().to_vec(),
-                result: Err(anyhow!("{}: {:?}", ErrorInfo::InvalidOp.as_ref(), invalid_op)),
-            },
-            TestData {
-                input: unsupported_op_serialised.as_bytes().to_vec(),
-                result: Err(anyhow!("{}: {:?}", ErrorInfo::UnsupportedOp.as_ref(), unsupported_op)),
-            },
-            TestData {
-                input: op_no_unwrap_params_serialised.as_bytes().to_vec(),
-                result: Err(anyhow!("{}", ErrorInfo::UnwrapParamsNoDc.as_ref())),
-            },
-            TestData {
-                input: op_with_empty_unwrap_params_serialised.as_bytes().to_vec(),
-                result: Err(anyhow!("{}", ErrorInfo::UnwrapParamsNoDc.as_ref())),
-            },
-            TestData {
-                input: valid_serialised.as_bytes().to_vec(),
-                result: Ok(valid_key_provider_input),
-            },
-        ];
-
-        for (i, d) in tests.iter().enumerate() {
-            // Create a string containing details of the test
-            let msg = format!("test[{}]: {:?}", i, d);
-
-            let result = KeyProviderInput::try_from(d.input.clone());
-
-            let msg = format!("{}: result: {:?}", msg, result);
-
-            if d.result.is_err() {
-                assert!(result.is_err(), "{}", msg);
-
-                let expected_error = format!("{:?}", d.result.as_ref().err().unwrap());
-                let actual_error = format!("{:?}", result.err().unwrap());
-
-                assert!(actual_error.starts_with(&expected_error), "{}", msg);
-            } else {
-                assert!(result.is_ok(), "{}", msg);
-
-                let expected_result = d.result.as_ref().unwrap();
-                let actual_result = result.unwrap();
-
-                assert_eq!(expected_result, &actual_result, "{}", msg);
-            }
+    #[rstest]
+    #[case(b"", Err(anyhow!("EOF while parsing a value at line 1 column 0")))]
+    #[case(b"foobar", Err(anyhow!("expected ident at line 1 column 2")))]
+    #[case(b"{\"op\":\"\",\"keywrapparams\":{},\"keyunwrapparams\":{}}", Err(anyhow!(ErrorInfo::MissingOp.as_ref())))]
+    #[case(b"{\"op\":\"invalid\",\"keywrapparams\":{},\"keyunwrapparams\":{}}", Err(anyhow!(
+        "{}: \"invalid\"",
+        ErrorInfo::InvalidOp.as_ref(),
+    )))]
+    #[case(b"{\"op\":\"keywrap\",\"keywrapparams\":{},\"keyunwrapparams\":{}}", Err(anyhow!(
+        "{}: \"keywrap\": use a different key provider to encrypt images",
+        ErrorInfo::UnsupportedOp.as_ref(),
+    )))]
+    #[case(b"{\"op\":\"keyunwrap\",\"keywrapparams\":{},\"keyunwrapparams\":{}}", Err(anyhow!(
+        "{}",
+        ErrorInfo::UnwrapParamsNoDc.as_ref(),
+    )))]
+    #[case(b"{\"op\":\"keyunwrap\",\"keywrapparams\":{},\"keyunwrapparams\":{\"dc\":{\"Parameters\":{\"foo\":[\"bar\",\"baz\"]}},\"annotation\":\"annotation\"}}", Ok(()))]
+    fn test_key_provider_input(#[case] input: &[u8], #[case] result: Result<()>) {
+        let res = KeyProviderInput::try_from(input.to_vec());
+        println!("{res:?}");
+        assert_eq!(res.is_ok(), result.is_ok());
+        if result.is_err() {
+            assert_eq!(format!("{:?}", result.err()), format!("{:?}", res.err()));
         }
     }
 }

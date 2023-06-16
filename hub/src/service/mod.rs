@@ -15,3 +15,5 @@ mod get_resource {
 pub struct Service {
     core: DataHub,
 }
+
+impl Service {}

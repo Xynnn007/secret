@@ -7,7 +7,7 @@ use std::{collections::HashMap, sync::Arc};
 
 use anyhow::*;
 use log::info;
-use storage::{Type, Provider};
+use storage::{Provider, Type};
 use tokio::sync::Mutex;
 
 #[derive(Default)]

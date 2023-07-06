@@ -3,21 +3,33 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-use std::net::SocketAddr;
+use anyhow::*;
 
 use clap::Parser;
+use log::{error, info};
+use service::Server;
 
+pub mod args;
 pub mod service;
 
-#[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
-struct Args {
-    /// The socket address to listen to
-    #[arg(short, long)]
-    socket: SocketAddr,
-}
+pub use args::*;
 
 #[tokio::main]
 async fn main() {
+    match real_main().await {
+        std::result::Result::Ok(_) => {
+            info!("exit.");
+            std::process::exit(0);
+        }
+        Err(e) => {
+            error!("Exit because of error {e}");
+        }
+    }
+}
+
+async fn real_main() -> Result<()> {
     let args = Args::parse();
+
+    let server = Server::new(args).await?;
+    server.serve().await
 }

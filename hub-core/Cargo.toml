@@ -8,11 +8,14 @@ edition = "2021"
 
 [dependencies]
 anyhow.workspace = true
-kms.path = "../kms"
+cfg-if.workspace = true
+image.path = "../high-level-services/image"
+kbs-client = { path = "../low-level-services/kbs-client", optional = true }
+kms-client = { path = "../low-level-services/kms", optional = true, package = "kms" }
 log.workspace = true
-secret.path = "../secret"
+secret.path = "../high-level-services/secret"
 serde_json.workspace = true
-storage.path = "../storage"
+storage.path = "../low-level-services/storage"
 strum = { workspace = true, features = ["derive"] }
 tokio = { workspace = true, features = [ "rt-multi-thread", "macros" ] }
 
@@ -21,3 +24,8 @@ assert-json-diff.workspace = true
 
 [build-dependencies]
 tonic-build.workspace = true
+
+[features]
+default = [ "kbs", "kms" ]
+kbs = [ "kbs-client" ]
+kms = [ "dep:kms-client" ]

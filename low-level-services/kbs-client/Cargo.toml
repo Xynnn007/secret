@@ -1,0 +1,26 @@
+[package]
+name = "kbs-client"
+version = "0.1.0"
+authors = ["The Attestation Agent Authors"]
+publish = false
+edition = "2021"
+
+[dependencies]
+anyhow.workspace = true
+async-trait.workspace = true
+kbs_protocol.path = "../../auths/kbs_protocol"
+kbs-types.workspace = true
+log.workspace = true
+reqwest = { workspace = true, default-features = false, features = ["cookies", "json"], optional = true }
+resource_uri.path = "../../deps/resource_uri"
+serde.workspace = true
+serde_json.workspace = true
+
+[build-dependencies]
+tonic-build.workspace = true
+
+[features]
+default = [ "rust-crypto" ]
+
+rust-crypto = ["reqwest", "reqwest?/rustls-tls", "kbs_protocol/rust-crypto"]
+openssl = ["reqwest", "reqwest?/native-tls-vendored", "kbs_protocol/openssl"]

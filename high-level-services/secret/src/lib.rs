@@ -3,5 +3,5 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 
-pub mod hub;
-pub use hub::*;
+pub mod secret;
+pub mod unsealer;

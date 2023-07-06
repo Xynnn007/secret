@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package attestation_agent;
+
+// This proto defines the interface between attestation-agent and its caller
+// including the Confidential DataHub, etc.
+
+message GetEvidenceRequest {
+    string Challenge = 1;
+}
+
+message GetEvidenceResponse {
+    bytes Evidence = 1;
+}
+
+message GetAttesterTypeRequest {}
+
+message GetAttesterTypeResponse {
+    string Type = 1;
+}
+
+service AttestationAgentService {
+    rpc GetEvidence(GetEvidenceRequest) returns (GetEvidenceResponse) {};
+    rpc GetAttesterType(GetAttesterTypeRequest) returns (GetAttesterTypeResponse) {};
+}

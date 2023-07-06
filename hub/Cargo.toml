@@ -10,7 +10,8 @@ edition = "2021"
 anyhow.workspace = true
 base64.workspace = true
 clap = { workspace = true, features = [ "derive" ] }
-hub-core.path = "../hub-core"
+hub-core = { path = "../hub-core", default-features = false }
+log.workspace = true
 prost.workspace = true
 serde.workspace = true
 serde_json.workspace = true
@@ -23,3 +24,8 @@ rstest.workspace = true
 
 [build-dependencies]
 tonic-build.workspace = true
+
+[features]
+default = [ "kbs" ]
+kbs = [ "hub-core/kbs" ]
+kms = [ "hub-core/kms" ]

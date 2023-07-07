@@ -14,6 +14,7 @@ use tonic::transport::Server as TonicServer;
 use crate::Args;
 
 use self::services::{
+    getresource::getresource_proto::get_resource_service_server::GetResourceServiceServer,
     keyprovider::keyprovider_proto::key_provider_service_server::KeyProviderServiceServer,
     sealed_secret::keyprovider::sealed_secret_service_server::SealedSecretServiceServer,
 };
@@ -36,6 +37,7 @@ impl Server {
         let s = Arc::new(self);
         TonicServer::builder()
             .add_service(KeyProviderServiceServer::new(s.clone()))
+            .add_service(GetResourceServiceServer::new(s.clone()))
             .add_service(SealedSecretServiceServer::new(s))
             .serve(socket)
             .await?;

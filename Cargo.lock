@@ -716,6 +716,7 @@ dependencies = [
  "kbs-client",
  "kms",
  "log",
+ "resource_uri",
  "secret",
  "serde_json",
  "storage",

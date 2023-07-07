@@ -9,6 +9,7 @@ use anyhow::*;
 use image::annotation_packet::{v2::Unwrapper, AnnotationPacket};
 use kbs_client::Client as KbsClient;
 use kms_client::KMS;
+use resource_uri::ResourceUri;
 use secret::{secret::Secret, unsealer::UnSealer};
 use tokio::sync::Mutex;
 
@@ -93,5 +94,18 @@ impl DataHub {
                 bail!("Unwrap failed!")
             }
         }
+    }
+
+    pub async fn get_resource(&self, uri: String) -> Result<Vec<u8>> {
+        let resource_uri: ResourceUri =
+            serde_json::from_str(&uri).context("parse resource URI failed")?;
+        let resource = self
+            .kbs_client
+            .clone()
+            .lock()
+            .await
+            .get_resource(&resource_uri)
+            .await?;
+        Ok(resource)
     }
 }

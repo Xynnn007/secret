@@ -13,6 +13,7 @@ image.path = "../high-level-services/image"
 kbs-client = { path = "../low-level-services/kbs-client", optional = true }
 kms-client = { path = "../low-level-services/kms", optional = true, package = "kms" }
 log.workspace = true
+resource_uri.path = "../deps/resource_uri"
 secret.path = "../high-level-services/secret"
 serde_json.workspace = true
 storage.path = "../low-level-services/storage"

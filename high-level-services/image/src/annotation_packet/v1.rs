@@ -38,10 +38,10 @@ pub struct AnnotationPacketV1 {
 }
 
 impl AnnotationPacketV1 {
-    pub async fn unwrap_key_with(&self, kbs_client: Arc<Mutex<KbsClient>>) -> Result<Vec<u8>> {
+    pub async fn unwrap_key_with(self, kbs_client: Arc<Mutex<KbsClient>>) -> Result<Vec<u8>> {
         let key = {
-            let client = kbs_client.lock().await;
-            Zeroizing::new(client.get_resource(&self.kid).await?)
+            let mut client = kbs_client.lock().await;
+            Zeroizing::new(client.get_resource(self.kid).await?)
         };
 
         let decoder = base64::engine::general_purpose::STANDARD;

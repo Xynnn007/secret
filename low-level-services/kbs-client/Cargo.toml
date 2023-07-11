@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 anyhow.workspace = true
 async-trait.workspace = true
+jwt-simple.workspace = true
 kbs_protocol.path = "../../auths/kbs_protocol"
 kbs-types.workspace = true
 log.workspace = true

@@ -53,10 +53,10 @@ impl Envelope {
         let enc_dek = base64_decoder.decode(&self.encrypted_key)?;
         let datakey = {
             let key = {
-                let client = unsealer.lock().await;
+                let mut client = unsealer.lock().await;
                 let key_url = ResourceUri::try_from(&self.key_id[..])
                     .map_err(|e| anyhow!("parse key id as resource uri failed: {e}"))?;
-                Zeroizing::new(client.get_resource(&key_url).await?)
+                Zeroizing::new(client.get_resource(key_url).await?)
             };
 
             // If KBS is used as envelope secret, a IV field must be inside the annotations.
@@ -117,10 +117,10 @@ impl Envelope {
 
         let (encrypted_key, annotations) = {
             let key = {
-                let client = sealer.lock().await;
+                let mut client = sealer.lock().await;
                 let key_url = ResourceUri::try_from(&keyid[..])
                     .map_err(|e| anyhow!("parse key id as resource uri failed: {e}"))?;
-                Zeroizing::new(client.get_resource(&key_url).await?)
+                Zeroizing::new(client.get_resource(key_url).await?)
             };
             let mut sealed_iv = [0u8; 12];
             rand::thread_rng().fill(&mut sealed_iv);

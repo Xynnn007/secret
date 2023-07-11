@@ -52,7 +52,7 @@ pub enum Unwrapper {
 }
 
 impl AnnotationPacketV2 {
-    pub async fn unwrap_key_with(&self, unwrapper: Unwrapper) -> Result<Vec<u8>> {
+    pub async fn unwrap_key_with(self, unwrapper: Unwrapper) -> Result<Vec<u8>> {
         match unwrapper {
             Unwrapper::Kbs(kbs_client) => {
                 if self.provider != "kbs" {
@@ -68,8 +68,8 @@ impl AnnotationPacketV2 {
                 let resource_uri = ResourceUri::try_from(&self.kid[..])
                     .map_err(|e| anyhow!("cannot parse the kid into a KBS Resource URI: {e}"))?;
                 let key = {
-                    let client = kbs_client.lock().await;
-                    Zeroizing::new(client.get_resource(&resource_uri).await?)
+                    let mut client = kbs_client.lock().await;
+                    Zeroizing::new(client.get_resource(resource_uri).await?)
                 };
                 let decoder = base64::engine::general_purpose::STANDARD;
                 let iv = decoder.decode(&iv).context("decode iv")?;

@@ -29,8 +29,8 @@ impl VaultSecret {
         let secret_url = ResourceUri::try_from(&self.name[..])
             .map_err(|e| anyhow!("parse `name` as resource uri failed: {e}"))?;
         let secret = {
-            let client = unsealer.lock().await;
-            client.get_resource(&secret_url).await?
+            let mut client = unsealer.lock().await;
+            client.get_resource(secret_url).await?
         };
 
         Ok(secret)

@@ -6,9 +6,12 @@
 use std::time::Duration;
 
 use anyhow::*;
+use async_recursion::async_recursion;
 use base64::Engine;
 use crypto::{rust::rsa::PaddingMode, WrapType};
 use kbs_types::{Attestation, Challenge, ErrorInformation, Request, Response, Tee};
+use log::info;
+use resource_uri::ResourceUri;
 use serde::Deserialize;
 use sha2::{Digest, Sha384};
 use zeroize::Zeroizing;
@@ -26,16 +29,16 @@ pub struct Handshaker {
     tee: Tee,
 
     /// The asymmetric key pair inside the TEE
-    pub tee_key: TeeKeyPair,
+    pub tee_key: Option<TeeKeyPair>,
 
     /// Used to connect to the local attestation-agent to get the evidence
     aa_client: attestation_agent_client::Client,
 
     /// Http client
-    pub http_client: reqwest::Client,
+    http_client: reqwest::Client,
 
-    /// Whether this client is authenticated
-    authenticated: bool,
+    /// KBS Host URL
+    kbs_host_url: Option<String>,
 }
 
 impl Handshaker {
@@ -58,20 +61,20 @@ impl Handshaker {
 
         Ok(Handshaker {
             tee,
-            tee_key: TeeKeyPair::new()?,
+            tee_key: None,
             aa_client,
             http_client,
-            authenticated: false,
+            kbs_host_url: None,
         })
     }
 
-    async fn generate_evidence(&mut self, nonce: String) -> Result<Attestation> {
-        let tee_pubkey = self.tee_key.export_pubkey()?;
+    async fn generate_evidence(&mut self, nonce: String, tee_key: Vec<&[u8]>) -> Result<String> {
         let mut hasher = Sha384::new();
         let engine = base64::engine::general_purpose::STANDARD;
         hasher.update(nonce.as_bytes());
-        hasher.update(tee_pubkey.k_mod.as_bytes());
-        hasher.update(tee_pubkey.k_exp.as_bytes());
+        tee_key
+            .iter()
+            .for_each(|key_material| hasher.update(key_material));
         let ehd = engine.encode(hasher.finalize());
 
         let tee_evidence = self
@@ -81,13 +84,10 @@ impl Handshaker {
             .map_err(|e| anyhow!("Get TEE evidence failed: {:?}", e))
             .and_then(|c| Ok(base64::engine::general_purpose::STANDARD.encode(c)))?;
 
-        Ok(Attestation {
-            tee_pubkey,
-            tee_evidence,
-        })
+        Ok(tee_evidence)
     }
 
-    pub async fn handshake(&mut self, kbs_host_url: &str) -> Result<String> {
+    pub async fn handshake(&mut self, kbs_host_url: String) -> Result<String> {
         let request = Request {
             version: KBS_PROTOCOL_VERSION.into(),
             tee: self.tee.clone(),
@@ -104,19 +104,27 @@ impl Handshaker {
             .json::<Challenge>()
             .await?;
 
-        let evidence = self.generate_evidence(challenge.nonce).await?;
+        let tee_keypair = TeeKeyPair::new()?;
+        let tee_pubkey = tee_keypair.export_pubkey()?;
+        let materials = vec![tee_pubkey.k_mod.as_bytes(), tee_pubkey.k_exp.as_bytes()];
 
+        let tee_evidence = self.generate_evidence(challenge.nonce, materials).await?;
+        let attestation = Attestation {
+            tee_pubkey,
+            tee_evidence,
+        };
         let attest_response = self
             .http_client
             .post(format!("{kbs_host_url}/{KBS_URL_PREFIX}/attest"))
             .header("Content-Type", "application/json")
-            .json(&evidence)
+            .json(&attestation)
             .send()
             .await?;
 
         match attest_response.status() {
             reqwest::StatusCode::OK => {
-                self.authenticated = true;
+                self.tee_key = Some(tee_keypair);
+                self.kbs_host_url = Some(kbs_host_url);
                 let token = attest_response.json::<serde_json::Value>().await?["token"].to_string();
                 Ok(token)
             }
@@ -133,7 +141,7 @@ impl Handshaker {
         }
     }
 
-    pub fn decrypt_response(&self, response: Response) -> Result<Vec<u8>> {
+    fn decrypt_response(&self, response: Response) -> Result<Vec<u8>> {
         // deserialize the jose header and check that the key type matches
         let protected: ProtectedHeader = serde_json::from_str(&response.protected)?;
         if protected.alg != PaddingMode::PKCS1v15.as_ref() {
@@ -145,6 +153,8 @@ impl Handshaker {
         let wrapped_symkey: Vec<u8> = decoder.decode(response.encrypted_key)?;
         let symkey: Vec<u8> = self
             .tee_key
+            .as_ref()
+            .ok_or_else(|| anyhow!("Handshake not called before!"))?
             .decrypt(PaddingMode::PKCS1v15, wrapped_symkey)?;
 
         let iv = decoder.decode(response.iv)?;
@@ -153,6 +163,44 @@ impl Handshaker {
         let plaintext = crypto::decrypt(Zeroizing::new(symkey), ciphertext, iv, protected.enc)?;
 
         Ok(plaintext)
+    }
+
+    #[async_recursion]
+    pub async fn get(&mut self, resource_url: ResourceUri, retry: bool) -> Result<Vec<u8>> {
+        let kbs_host_url = self
+            .kbs_host_url
+            .as_ref()
+            .ok_or_else(|| anyhow!("Handshake not called before!"))?;
+        let url = format!(
+            "{kbs_host_url}/{KBS_URL_PREFIX}/{}",
+            resource_url.resource_path()
+        );
+
+        let res = self.http_client.get(url).send().await?;
+        match res.status() {
+            reqwest::StatusCode::OK => {
+                let response = res.json::<Response>().await?;
+                let payload_data = self.decrypt_response(response)?;
+                Ok(payload_data)
+            }
+            reqwest::StatusCode::UNAUTHORIZED => {
+                if !retry {
+                    bail!("Unauthorized request.");
+                }
+                info!("retry to auth again.");
+                self.handshake(kbs_host_url.clone()).await?;
+                self.get(resource_url, false).await
+            }
+            reqwest::StatusCode::NOT_FOUND => {
+                bail!("KBS resource Not Found (Error 404)")
+            }
+            _ => {
+                bail!(
+                    "KBS Server Internal Failed, Response: {:?}",
+                    res.text().await?
+                )
+            }
+        }
     }
 }
 

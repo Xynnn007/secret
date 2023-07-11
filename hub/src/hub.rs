@@ -24,6 +24,9 @@ pub struct DataHub {
 impl DataHub {
     #[cfg(feature = "kbs")]
     pub async fn start(kbs_host_url: String) -> Result<Self> {
+        // We should think about the given parameter here. Also, we
+        // should think about how the `auth` layer runs.
+
         let kbs_client = KbsClient::new(kbs_host_url).await?;
         Ok(Self {
             kbs_client: Arc::new(Mutex::new(kbs_client)),
@@ -104,7 +107,7 @@ impl DataHub {
             .clone()
             .lock()
             .await
-            .get_resource(&resource_uri)
+            .get_resource(resource_uri)
             .await?;
         Ok(resource)
     }

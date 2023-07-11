@@ -63,8 +63,8 @@ mod tests {
 
         let expected = json!({
             "version": "0.1.0",
-            "type": "KMS",
-            "provider": "Ali",
+            "type": "Envelope",
+            "provider": "ali",
             "key_id": "xxx",
             "encrypted_key": "yyy",
             "encrypted_data": "zzz",
@@ -90,7 +90,7 @@ mod tests {
         let expected = json!({
             "version": "0.1.0",
             "type": "Vault",
-            "provider": "Ali",
+            "provider": "ali",
             "name": "xxx",
             "annotations": {}
         });

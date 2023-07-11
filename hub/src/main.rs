@@ -10,6 +10,10 @@ use log::{error, info};
 use service::Server;
 
 pub mod args;
+
+pub mod hub;
+pub use hub::*;
+
 pub mod service;
 
 pub use args::*;

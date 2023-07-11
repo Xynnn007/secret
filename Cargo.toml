@@ -7,7 +7,6 @@ members = [
     "low-level-services/kms",
     "low-level-services/storage",
     "hub",
-    "hub-core",
     "tools",
     "deps/crypto",
     "deps/resource_uri",

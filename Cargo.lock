@@ -284,12 +284,18 @@ name = "confidential-datahub"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "assert-json-diff",
  "base64",
+ "cfg-if",
  "clap",
- "hub-core",
+ "image",
+ "kbs-client",
+ "kms",
  "log",
  "prost",
+ "resource_uri",
  "rstest",
+ "secret",
  "serde",
  "serde_json",
  "strum",
@@ -704,26 +710,6 @@ name = "httpdate"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c4a1e36c821dbe04574f602848a19f742f4fb3c98d40449f11bcad18d6b17421"
-
-[[package]]
-name = "hub-core"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "assert-json-diff",
- "cfg-if",
- "image",
- "kbs-client",
- "kms",
- "log",
- "resource_uri",
- "secret",
- "serde_json",
- "storage",
- "strum",
- "tokio",
- "tonic-build",
-]
 
 [[package]]
 name = "hyper"

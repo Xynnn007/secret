@@ -8,10 +8,9 @@ pub mod services;
 use std::sync::Arc;
 
 use anyhow::*;
-use hub_core::DataHub;
 use tonic::transport::Server as TonicServer;
 
-use crate::Args;
+use crate::{Args, DataHub};
 
 use self::services::{
     getresource::getresource_proto::get_resource_service_server::GetResourceServiceServer,

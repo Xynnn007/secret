@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "attestation-agent",
     "auths/kbs_protocol",
     "high-level-services/secret",
     "high-level-services/image",

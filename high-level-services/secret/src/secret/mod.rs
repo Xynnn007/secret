@@ -5,6 +5,7 @@
 
 pub mod layout;
 
+use anyhow::*;
 use serde::{Deserialize, Serialize};
 use strum::EnumString;
 
@@ -21,9 +22,6 @@ pub enum SecretContent {
 pub struct Secret {
     pub version: String,
 
-    /// decryptor driver of the secret
-    pub provider: String,
-
     #[serde(flatten)]
     pub r#type: SecretContent,
 }
@@ -32,6 +30,15 @@ pub struct Secret {
 pub enum SealType {
     Envelope,
     Vault,
+}
+
+impl Secret {
+    pub async fn unseal(&self) -> Result<Vec<u8>> {
+        match &self.r#type {
+            SecretContent::Envelope(e) => e.unseal().await,
+            SecretContent::Vault(v) => v.unseal().await,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -50,8 +57,9 @@ mod tests {
     fn serialize_enveloped_secret() {
         let secret = Secret {
             version: "0.1.0".into(),
-            provider: "ali".into(),
+            
             r#type: SecretContent::Envelope(Envelope {
+                provider: "ali".into(),
                 key_id: "xxx".into(),
                 encrypted_key: "yyy".into(),
                 encrypted_data: "zzz".into(),
@@ -80,8 +88,9 @@ mod tests {
     fn serialize_vault_secret() {
         let secret = Secret {
             version: "0.1.0".into(),
-            provider: "ali".into(),
+            
             r#type: SecretContent::Vault(VaultSecret {
+                provider: "ali".into(),
                 annotations: HashMap::new(),
                 name: "xxx".into(),
             }),

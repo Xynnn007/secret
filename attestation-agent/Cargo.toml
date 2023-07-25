@@ -1,0 +1,33 @@
+[package]
+name = "attestation-agent"
+version = "0.1.0"
+authors = ["The Attestation Agent Authors"]
+publish = false
+edition = "2021"
+
+[dependencies]
+anyhow.workspace = true
+async-trait.workspace = true
+attester = { git = "https://github.com/confidential-containers/guest-components.git", default-features = false }
+base64.workspace = true
+clap.workspace = true
+env_logger.workspace = true
+log.workspace = true
+prost = { workspace = true, optional = true }
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+tonic = { workspace = true, optional = true }
+
+[build-dependencies]
+tonic-build = { workspace = true, optional = true }
+
+[features]
+default = ["grpc", "all-attesters"]
+grpc = ["tonic", "prost", "tonic-build"]
+
+all-attesters = ["tdx", "occlum", "snp"]
+tdx = ["attester/tdx-attester"]
+occlum = ["attester/occlum-attester"]
+az_snp_vtpm = ["attester/az-snp-vtpm-attester"]
+snp = ["attester/snp-attester"]
